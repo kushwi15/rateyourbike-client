@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
+// const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'https://rateyourbike.onrender.com';
+
 interface BikeReview {
   _id: string;
   bikeName: string;
@@ -49,8 +52,7 @@ export const BikeProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fetchBikes = async () => {
       try {
         setLoading(true);
-        // const response = await axios.get('http://localhost:5000/api/bikes');
-        const response = await axios.get('https://rateyourbike.onrender.com/api/bikes');
+        const response = await axios.get(`${API_BASE_URL}/api/bikes`);
         setBikes(response.data);
         setLoading(false);
       } catch (err) {
@@ -71,8 +73,7 @@ export const BikeProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       setLoading(true);
-      // const response = await axios.get(`http://localhost:5000/api/bikes/search?query=${query}`);
-      const response = await axios.get(`https://rateyourbike.onrender.com/api/bikes/search?query=${query}`);
+      const response = await axios.get(`${API_BASE_URL}/api/bikes/search?query=${encodeURIComponent(query)}`);
       setSearchResults(response.data);
       setLoading(false);
     } catch (err) {

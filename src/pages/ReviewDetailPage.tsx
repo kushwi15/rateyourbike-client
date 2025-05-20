@@ -4,8 +4,11 @@ import axios from 'axios';
 import StarRating from '../components/StarRating';
 import ImageGallery from '../components/ImageGallery';
 import { formatDistanceToNow } from '../utils/dateUtils';
-import { ArrowLeft, IndianRupee, Wrench, Calendar, Gauge, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, IndianRupee, Wrench, Calendar, Gauge, CheckCircle, XCircle, User } from 'lucide-react';
 import { useBikeContext } from '../context/BikeContext';
+
+// const API_BASE_URL = 'http://localhost:5000/api'; // Update this to your production URL when needed
+const API_BASE_URL = 'https://rateyourbike.onrender.com/api';
 
 const ReviewDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,8 +37,7 @@ const ReviewDetailPage: React.FC = () => {
         setLoading(true);
         if (!id) throw new Error('Review ID is missing');
         
-        // const response = await axios.get(`http://localhost:5000/api/bikes/${id}`);
-        const response = await axios.get(`https://rateyourbike.onrender.com/api/bikes/${id}`);
+        const response = await axios.get(`${API_BASE_URL}/bikes/${id}`);
         setReview(response.data);
         setLoading(false);
       } catch (err) {
@@ -93,6 +95,10 @@ const ReviewDetailPage: React.FC = () => {
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             {/* Header */}
             <div className="bg-[#0B60B0] text-white p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <User size={20} />
+                <span className="font-medium">{review.riderName}</span>
+              </div>
               <h1 className="text-2xl md:text-3xl font-bold">{review.bikeName}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 <span className="text-lg">{review.modelName}</span>
@@ -136,42 +142,24 @@ const ReviewDetailPage: React.FC = () => {
                       <p className="font-medium">{review.totalKM.toLocaleString()} km</p>
                     </div>
                   </div>
-                  
+                </div>
+                
+                <div className="space-y-4">
                   {/* Bike Cost */}
                   <div className="flex items-start">
                     <IndianRupee className="text-[#0B60B0] mt-1 mr-3 flex-shrink-0" size={20} />
                     <div>
                       <p className="text-sm text-gray-500">Bike Cost</p>
-                      <p className="font-medium">{review.bikeCost.toLocaleString()}</p>
+                      <p className="font-medium">₹{review.bikeCost.toLocaleString()}</p>
                     </div>
                   </div>
-                </div>
-                
-                <div className="space-y-4">
+                  
                   {/* Cost Per Service */}
                   <div className="flex items-start">
                     <Wrench className="text-[#0B60B0] mt-1 mr-3 flex-shrink-0" size={20} />
                     <div>
                       <p className="text-sm text-gray-500">Cost Per Service</p>
                       <p className="font-medium">₹{review.costPerService.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Minor Repair Cost */}
-                  <div className="flex items-start">
-                    <Wrench className="text-[#0B60B0] mt-1 mr-3 flex-shrink-0" size={20} />
-                    <div>
-                      <p className="text-sm text-gray-500">Minor Repair Cost</p>
-                      <p className="font-medium">₹{review.minorRepairCost.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Major Repair Cost */}
-                  <div className="flex items-start">
-                    <Wrench className="text-[#0B60B0] mt-1 mr-3 flex-shrink-0" size={20} />
-                    <div>
-                      <p className="text-sm text-gray-500">Major Repair Cost</p>
-                      <p className="font-medium">₹{review.majorRepairCost.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>

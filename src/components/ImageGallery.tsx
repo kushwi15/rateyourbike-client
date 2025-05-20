@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
+// Define your API base URL here (change as needed for dev/prod)
+// const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'https://rateyourbike.onrender.com';
+
 interface ImageGalleryProps {
   images: string[];
   alt: string;
@@ -9,6 +13,12 @@ interface ImageGalleryProps {
 const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Helper to build full image URLs
+  const getImageUrl = (path: string) => {
+    const base = API_BASE_URL.replace(/\/$/, ''); // remove trailing slash if any
+    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
 
   const goToPrevious = () => {
     setCurrentIndex((prevIndex) => (prevIndex === 0 ? images.length - 1 : prevIndex - 1));
@@ -43,8 +53,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
     <div className="space-y-4">
       <div className="relative aspect-[16/9] bg-gray-100 rounded-lg overflow-hidden">
         <img
-          // src={`http://localhost:5000${images[currentIndex]}`}
-          src={`https://rateyourbike.onrender.com${images[currentIndex]}`}
+          src={getImageUrl(images[currentIndex])}
           alt={`${alt} - Featured Image`}
           className="w-full h-full object-cover transition-opacity duration-300"
         />
@@ -74,8 +83,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
             }`}
           >
             <img
-              // src={`http://localhost:5000${image}`}
-              src={`https://rateyourbike.onrender.com${image}`}
+              src={getImageUrl(image)}
               alt={`${alt} - Thumbnail ${index + 1}`}
               className="w-full h-full object-cover hover:opacity-90 transition-opacity"
             />
@@ -94,8 +102,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
           </button>
           <div className="relative max-w-5xl w-full">
             <img
-              // src={`http://localhost:5000${images[currentIndex]}`}
-              src={`https://rateyourbike.onrender.com${images[currentIndex]}`}
+              src={getImageUrl(images[currentIndex])}
               alt={`${alt} - Full size image`}
               className="w-full max-h-[85vh] object-contain"
             />

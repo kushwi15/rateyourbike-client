@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StarRating from '../components/StarRating';
 import ImageUploader from '../components/ImageUploader';
@@ -9,14 +9,13 @@ import { Info, Loader, Check } from 'lucide-react';
 const ReviewFormPage: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    riderName: '', // Added riderName field
     bikeName: '',
     modelName: '',
     purchaseYear: new Date().getFullYear(),
     totalKM: 0,
     bikeCost: 0,
     costPerService: 0,
-    minorRepairCost: 0,
-    majorRepairCost: 0,
     review: '',
     rating: 0,
     worthTheCost: 'Yes'
@@ -26,6 +25,12 @@ const ReviewFormPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [brandSuggestions, setBrandSuggestions] = useState<string[]>([]);
+  const [modelSuggestions, setModelSuggestions] = useState<string[]>([]);
+  const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
+  const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+  const brandInputRef = useRef<HTMLInputElement>(null);
+  const modelInputRef = useRef<HTMLInputElement>(null);
 
   // Scroll to top on page load
   useEffect(() => {
@@ -35,19 +40,37 @@ const ReviewFormPage: React.FC = () => {
   // Update available models when bike brand changes
   useEffect(() => {
     if (formData.bikeName) {
-      setAvailableModels(bikeData[formData.bikeName as keyof typeof bikeData] || []);
+      const models = bikeData[formData.bikeName as keyof typeof bikeData] || [];
+      setAvailableModels(models);
       // Reset model selection if brand changes
-      if (!bikeData[formData.bikeName as keyof typeof bikeData]?.includes(formData.modelName)) {
+      if (!models.includes(formData.modelName)) {
         setFormData(prev => ({ ...prev, modelName: '' }));
       }
     }
   }, [formData.bikeName]);
 
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (brandInputRef.current && !brandInputRef.current.contains(event.target as Node)) {
+        setShowBrandSuggestions(false);
+      }
+      if (modelInputRef.current && !modelInputRef.current.contains(event.target as Node)) {
+        setShowModelSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
     // Convert numeric fields to numbers
-    if (['purchaseYear', 'totalKM', 'bikeCost', 'costPerService', 'minorRepairCost', 'majorRepairCost'].includes(name)) {
+    if (['purchaseYear', 'totalKM', 'bikeCost', 'costPerService'].includes(name)) {
       const numValue = Number(value);
       setFormData({
         ...formData,
@@ -69,6 +92,66 @@ const ReviewFormPage: React.FC = () => {
     }
   };
 
+  // Handle brand input change
+  const handleBrandInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, bikeName: value, modelName: '' }));
+    
+    if (value.length > 0) {
+      const filtered = Object.keys(bikeData).filter(brand =>
+        brand.toLowerCase().includes(value.toLowerCase())
+      );
+      setBrandSuggestions(filtered);
+      setShowBrandSuggestions(true);
+    } else {
+      setBrandSuggestions([]);
+      setShowBrandSuggestions(false);
+    }
+    
+    if (errors.bikeName) {
+      setErrors(prev => ({ ...prev, bikeName: '' }));
+    }
+  };
+
+  // Handle model input change
+  const handleModelInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, modelName: value }));
+    
+    if (value.length > 0 && formData.bikeName) {
+      const models = bikeData[formData.bikeName as keyof typeof bikeData] || [];
+      const filtered = models.filter(model =>
+        model.toLowerCase().includes(value.toLowerCase())
+      );
+      setModelSuggestions(filtered);
+      setShowModelSuggestions(true);
+    } else {
+      setModelSuggestions([]);
+      setShowModelSuggestions(false);
+    }
+    
+    if (errors.modelName) {
+      setErrors(prev => ({ ...prev, modelName: '' }));
+    }
+  };
+
+  // Select a brand from suggestions
+  const selectBrand = (brand: string) => {
+    setFormData(prev => ({ ...prev, bikeName: brand, modelName: '' }));
+    setBrandSuggestions([]);
+    setShowBrandSuggestions(false);
+    setModelSuggestions([]);
+    setShowModelSuggestions(false);
+    setTimeout(() => modelInputRef.current?.focus(), 0);
+  };
+
+  // Select a model from suggestions
+  const selectModel = (model: string) => {
+    setFormData(prev => ({ ...prev, modelName: model }));
+    setModelSuggestions([]);
+    setShowModelSuggestions(false);
+  };
+
   const setRating = (rating: number) => {
     setFormData({
       ...formData,
@@ -87,6 +170,7 @@ const ReviewFormPage: React.FC = () => {
     const newErrors: { [key: string]: string } = {};
     
     // Required fields
+    if (!formData.riderName) newErrors.riderName = 'Please enter your name';
     if (!formData.bikeName) newErrors.bikeName = 'Please select a bike brand';
     if (!formData.modelName) newErrors.modelName = 'Please select a model';
     if (formData.rating === 0) newErrors.rating = 'Please rate your bike';
@@ -100,8 +184,6 @@ const ReviewFormPage: React.FC = () => {
     if (formData.totalKM < 0) newErrors.totalKM = 'Cannot be negative';
     if (formData.bikeCost <= 0) newErrors.bikeCost = 'Please enter the bike cost';
     if (formData.costPerService < 0) newErrors.costPerService = 'Cannot be negative';
-    if (formData.minorRepairCost < 0) newErrors.minorRepairCost = 'Cannot be negative';
-    if (formData.majorRepairCost < 0) newErrors.majorRepairCost = 'Cannot be negative';
     
     // Images validation
     if (images.length < 3) newErrors.images = 'Please upload at least 3 images';
@@ -201,7 +283,7 @@ const ReviewFormPage: React.FC = () => {
               <Info className="text-blue-500 mr-3 mt-0.5 flex-shrink-0" size={20} />
               <div>
                 <p className="text-sm text-blue-800">
-                  Your review will help fellow  make informed decisions. Once submitted, reviews cannot be edited or deleted.
+                  Your review will help fellow riders make informed decisions. Once submitted, reviews cannot be edited or deleted.
                 </p>
               </div>
             </div>
@@ -215,162 +297,170 @@ const ReviewFormPage: React.FC = () => {
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Bike Brand */}
+              {/* Rider Name */}
               <div>
+                <label htmlFor="riderName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Your Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="riderName"
+                  name="riderName"
+                  value={formData.riderName}
+                  onChange={handleChange}
+                  className={`w-full rounded-md border ${errors.riderName ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
+                  placeholder="Enter your name"
+                />
+                {errors.riderName && <p className="mt-1 text-sm text-red-600">{errors.riderName}</p>}
+              </div>
+
+              {/* Bike Brand - Autocomplete Input */}
+              <div className="relative" ref={brandInputRef}>
                 <label htmlFor="bikeName" className="block text-sm font-medium text-gray-700 mb-1">
                   Bike Brand <span className="text-red-500">*</span>
                 </label>
-                <select
+                <input
+                  type="text"
                   id="bikeName"
                   name="bikeName"
                   value={formData.bikeName}
-                  onChange={handleChange}
+                  onChange={handleBrandInputChange}
+                  onFocus={() => formData.bikeName && setShowBrandSuggestions(true)}
                   className={`w-full rounded-md border ${errors.bikeName ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
-                >
-                  <option value="">Select a brand</option>
-                  {Object.keys(bikeData).map(brand => (
-                    <option key={brand} value={brand}>{brand}</option>
-                  ))}
-                </select>
+                  placeholder="Start typing bike brand..."
+                  autoComplete="off"
+                />
+                {showBrandSuggestions && brandSuggestions.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-300 max-h-60 overflow-auto">
+                    {brandSuggestions.map(brand => (
+                      <div
+                        key={brand}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => selectBrand(brand)}
+                      >
+                        {brand}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {errors.bikeName && <p className="mt-1 text-sm text-red-600">{errors.bikeName}</p>}
               </div>
               
-              {/* Model Name */}
-              <div>
+              {/* Model Name - Autocomplete Input */}
+              <div className="relative" ref={modelInputRef}>
                 <label htmlFor="modelName" className="block text-sm font-medium text-gray-700 mb-1">
                   Model Name <span className="text-red-500">*</span>
                 </label>
-                <select
+                <input
+                  type="text"
                   id="modelName"
                   name="modelName"
                   value={formData.modelName}
-                  onChange={handleChange}
+                  onChange={handleModelInputChange}
+                  onFocus={() => {
+                    if (formData.bikeName && formData.modelName) {
+                      setShowModelSuggestions(true);
+                    }
+                  }}
                   disabled={!formData.bikeName}
                   className={`w-full rounded-md border ${errors.modelName ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0] ${!formData.bikeName ? 'bg-gray-100' : ''}`}
-                >
-                  <option value="">Select a model</option>
-                  {availableModels.map(model => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
-                </select>
+                  placeholder={formData.bikeName ? "Start typing model..." : "Select brand first"}
+                  autoComplete="off"
+                />
+                {showModelSuggestions && modelSuggestions.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-300 max-h-60 overflow-auto">
+                    {modelSuggestions.map(model => (
+                      <div
+                        key={model}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => selectModel(model)}
+                      >
+                        {model}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {errors.modelName && <p className="mt-1 text-sm text-red-600">{errors.modelName}</p>}
               </div>
+
+              {/* Purchase Year */}
+              <div>
+                <label htmlFor="purchaseYear" className="block text-sm font-medium text-gray-700 mb-1">
+                  Purchase Year
+                </label>
+                <select
+                  id="purchaseYear"
+                  name="purchaseYear"
+                  value={formData.purchaseYear}
+                  onChange={handleChange}
+                  className={`w-full rounded-md border ${errors.purchaseYear ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
+                >
+                  <option value="">Select Year</option>
+                  {[...Array(new Date().getFullYear() - 1999)].map((_, index) => {
+                    const year = 2000 + index;
+                    return (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    );
+                  })}
+                </select>
+                {errors.purchaseYear && <p className="mt-1 text-sm text-red-600">{errors.purchaseYear}</p>}
+              </div>
               
-{/* Purchase Year */}
-<div>
-  <label htmlFor="purchaseYear" className="block text-sm font-medium text-gray-700 mb-1">
-    Purchase Year
-  </label>
-  <select
-    id="purchaseYear"
-    name="purchaseYear"
-    value={formData.purchaseYear}
-    onChange={handleChange}
-    className={`w-full rounded-md border ${errors.purchaseYear ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
-  >
-    <option value="">Select Year</option>
-    {[...Array(new Date().getFullYear() - 1999)].map((_, index) => {
-      const year = 2000 + index;
-      return (
-        <option key={year} value={year}>
-          {year}
-        </option>
-      );
-    })}
-  </select>
-  {errors.purchaseYear && <p className="mt-1 text-sm text-red-600">{errors.purchaseYear}</p>}
-</div>
+              {/* Total KM */}
+              <div>
+                <label htmlFor="totalKM" className="block text-sm font-medium text-gray-700 mb-1">
+                  Total KM Driven
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  id="totalKM"
+                  name="totalKM"
+                  value={formData.totalKM}
+                  onChange={handleChange}
+                  className={`w-full rounded-md border ${errors.totalKM ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
+                  placeholder="0"
+                />
+                {errors.totalKM && <p className="mt-1 text-sm text-red-600">{errors.totalKM}</p>}
+              </div>
 
-              
-{/* Total KM */}
-<div>
-  <label htmlFor="totalKM" className="block text-sm font-medium text-gray-700 mb-1">
-    Total KM Driven
-  </label>
-  <input
-    type="text"
-    inputMode="numeric"
-    id="totalKM"
-    name="totalKM"
-    value={formData.totalKM}
-    onChange={handleChange}
-    className={`w-full rounded-md border ${errors.totalKM ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
-    placeholder="0"
-  />
-  {errors.totalKM && <p className="mt-1 text-sm text-red-600">{errors.totalKM}</p>}
-</div>
+              {/* Bike Cost */}
+              <div>
+                <label htmlFor="bikeCost" className="block text-sm font-medium text-gray-700 mb-1">
+                  Bike Cost (₹) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  id="bikeCost"
+                  name="bikeCost"
+                  value={formData.bikeCost}
+                  onChange={handleChange}
+                  className={`w-full rounded-md border ${errors.bikeCost ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
+                  placeholder="0"
+                />
+                {errors.bikeCost && <p className="mt-1 text-sm text-red-600">{errors.bikeCost}</p>}
+              </div>
 
-{/* Bike Cost */}
-<div>
-  <label htmlFor="bikeCost" className="block text-sm font-medium text-gray-700 mb-1">
-    Bike Cost (₹) <span className="text-red-500">*</span>
-  </label>
-  <input
-    type="text"
-    inputMode="numeric"
-    id="bikeCost"
-    name="bikeCost"
-    value={formData.bikeCost}
-    onChange={handleChange}
-    className={`w-full rounded-md border ${errors.bikeCost ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
-    placeholder="0"
-  />
-  {errors.bikeCost && <p className="mt-1 text-sm text-red-600">{errors.bikeCost}</p>}
-</div>
-
-{/* Cost Per Service */}
-<div>
-  <label htmlFor="costPerService" className="block text-sm font-medium text-gray-700 mb-1">
-    Cost Per Service (₹)
-  </label>
-  <input
-    type="text"
-    inputMode="numeric"
-    id="costPerService"
-    name="costPerService"
-    value={formData.costPerService}
-    onChange={handleChange}
-    className={`w-full rounded-md border ${errors.costPerService ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
-    placeholder="0"
-  />
-  {errors.costPerService && <p className="mt-1 text-sm text-red-600">{errors.costPerService}</p>}
-</div>
-
-{/* Minor Repair Cost */}
-<div>
-  <label htmlFor="minorRepairCost" className="block text-sm font-medium text-gray-700 mb-1">
-    Approximate Minor Repair Cost (₹)
-  </label>
-  <input
-    type="text"
-    inputMode="numeric"
-    id="minorRepairCost"
-    name="minorRepairCost"
-    value={formData.minorRepairCost}
-    onChange={handleChange}
-    className={`w-full rounded-md border ${errors.minorRepairCost ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
-    placeholder="0"
-  />
-  {errors.minorRepairCost && <p className="mt-1 text-sm text-red-600">{errors.minorRepairCost}</p>}
-</div>
-
-{/* Major Repair Cost */}
-<div>
-  <label htmlFor="majorRepairCost" className="block text-sm font-medium text-gray-700 mb-1">
-    Approximate Major Repair Cost (₹)
-  </label>
-  <input
-    type="text"
-    inputMode="numeric"
-    id="majorRepairCost"
-    name="majorRepairCost"
-    value={formData.majorRepairCost}
-    onChange={handleChange}
-    className={`w-full rounded-md border ${errors.majorRepairCost ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
-    placeholder="0"
-  />
-  {errors.majorRepairCost && <p className="mt-1 text-sm text-red-600">{errors.majorRepairCost}</p>}
-</div>
+              {/* Cost Per Service */}
+              <div>
+                <label htmlFor="costPerService" className="block text-sm font-medium text-gray-700 mb-1">
+                  Cost Per Service (₹)
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  id="costPerService"
+                  name="costPerService"
+                  value={formData.costPerService}
+                  onChange={handleChange}
+                  className={`w-full rounded-md border ${errors.costPerService ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
+                  placeholder="0"
+                />
+                {errors.costPerService && <p className="mt-1 text-sm text-red-600">{errors.costPerService}</p>}
+              </div>
             </div>
             
             {/* Worth The Cost */}

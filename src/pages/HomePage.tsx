@@ -1,14 +1,47 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import SearchBar from '../components/SearchBar';
 import { useBikeContext } from '../context/BikeContext';
 import { Link } from 'react-router-dom';
 import StarRating from '../components/StarRating';
-import { Bike, ArrowRight, Search } from 'lucide-react';
+import { Bike, ArrowRight, Search, User } from 'lucide-react';
+import icon from '../assets/icon.png';
+
+// const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'https://rateyourbike.onrender.com';
+
+// 🔢 Animated Bike Counter Component
+const BikeCount: React.FC<{ count: number }> = ({ count }) => {
+  const [displayCount, setDisplayCount] = useState(0);
+
+  useEffect(() => {
+    let start = 0;
+    const duration = 1000; // in milliseconds
+    const increment = Math.ceil(count / (duration / 30));
+
+    const counter = setInterval(() => {
+      start += increment;
+      if (start >= count) {
+        start = count;
+        clearInterval(counter);
+      }
+      setDisplayCount(start);
+    }, 30);
+
+    return () => clearInterval(counter);
+  }, [count]);
+
+  return (
+    <p className="flex items-center justify-center text-lg md:text-xl mb-8 text-gray-300">
+      <img src={icon} alt="Bike Icon" className="h-8" />
+      <span className="font-semibold ml-1">{displayCount}</span>
+      <span className="ml-2">bikes listed and counting!</span>
+    </p>
+  );
+};
 
 const HomePage: React.FC = () => {
   const { bikes, searchResults, loading } = useBikeContext();
 
-  // Scroll to top on page load
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -18,7 +51,7 @@ const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-<section className="bg-gradient-to-r from-[#0B60B0] to-[#0A4D8C] text-white py-16 md:py-24">
+      <section className="bg-gradient-to-r from-[#0B60B0] to-[#0A4D8C] text-white py-16 md:py-24">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-3xl md:text-5xl font-bold mb-6">
@@ -28,10 +61,8 @@ const HomePage: React.FC = () => {
               Search for detailed bike reviews or share your own experience — no registration required!
             </p>
 
-            {/* Dynamic Bike Count */}
-            <p className="text-lg md:text-xl mb-8 text-gray-300">
-              🏍️ <span className="font-semibold">{bikes.length}</span> bikes listed and counting!
-            </p>
+            {/* 🚀 Dynamic Bike Count */}
+            <BikeCount count={bikes.length} />
 
             <div className="mt-8 mb-4">
               <SearchBar />
@@ -43,13 +74,13 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Featured Reviews Section */}
+      {/* Featured Reviews */}
       <section className="py-12 md:py-16 bg-white">
         <div className="container mx-auto px-4">
           <h2 className="text-2xl md:text-3xl font-bold mb-8 text-gray-800 text-center">
             {searchResults.length > 0 ? 'Search Results' : 'Recently Added Reviews'}
           </h2>
-          
+
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0B60B0]"></div>
@@ -57,16 +88,15 @@ const HomePage: React.FC = () => {
           ) : bikesToDisplay.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {bikesToDisplay.slice(0, 6).map((bike) => (
-                <Link 
-                  to={`/review/${bike._id}`} 
+                <Link
+                  to={`/review/${bike._id}`}
                   key={bike._id}
                   className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300"
                 >
                   <div className="h-48 bg-gray-200 relative overflow-hidden">
                     {bike.images && bike.images.length > 0 ? (
-                      <img 
-                        // src={`http://localhost:5000${bike.images[0]}`} 
-                        src={`https://rateyourbike.onrender.com${bike.images[0]}`} 
+                      <img
+                        src={`${API_BASE_URL}${bike.images[0]}`} // <-- Updated here
                         alt={bike.bikeName}
                         className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                       />
@@ -84,22 +114,26 @@ const HomePage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <User size={16} className="text-gray-500" />
+                      <span className="text-sm text-gray-600">{bike.riderName}</span>
+                    </div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-1">{bike.bikeName}</h3>
                     <p className="text-sm text-gray-600 mb-2">{bike.modelName} ({bike.purchaseYear})</p>
-                    
+
                     <div className="flex justify-between items-center mt-4">
                       <div>
                         <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                           ₹{bike.bikeCost.toLocaleString()}
                         </span>
                         <span className={`ml-2 inline-block text-xs px-2 py-1 rounded-full ${
-                          bike.worthTheCost === 'Yes' ? 'bg-green-100 text-green-800' : 
-                          bike.worthTheCost === 'No' ? 'bg-red-100 text-red-800' : 
+                          bike.worthTheCost === 'Yes' ? 'bg-green-100 text-green-800' :
+                          bike.worthTheCost === 'No' ? 'bg-red-100 text-red-800' :
                           'bg-amber-100 text-amber-800'
                         }`}>
-                          {bike.worthTheCost === 'Definitely Yes' ? 'Highly Worth It' : 
+                          {bike.worthTheCost === 'Definitely Yes' ? 'Highly Worth It' :
                            bike.worthTheCost === 'Yes' ? 'Worth It' : 'Not Worth It'}
                         </span>
                       </div>
@@ -119,7 +153,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-            {/* Call to Action */}
+      {/* CTA Section */}
       <section className="py-16 bg-gray-50 border-t border-gray-200">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-4 text-gray-800">
@@ -127,7 +161,7 @@ const HomePage: React.FC = () => {
           </h2>
           <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
             Help fellow Bikers make informed decisions by sharing your honest review.
-            No account needed!
+            <p>No account needed!</p>
           </p>
           <Link
             to="/review/new"
