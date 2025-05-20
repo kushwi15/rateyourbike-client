@@ -11,8 +11,8 @@ import { useEffect } from 'react';
 import { useBikeContext } from './context/BikeContext';
 
 // Initialize socket connection
-const socket = io('http://localhost:5000');
-// const socket = io('https://rateyourbike.onrender.com');
+// const socket = io('http://localhost:5000');
+const socket = io('https://rateyourbike.onrender.com');
 
 function App() {
   const { addNewReview } = useBikeContext();
