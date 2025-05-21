@@ -463,77 +463,42 @@ const ReviewFormPage: React.FC = () => {
               </div>
             </div>
             
-            {/* Worth The Cost */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Was it worth the cost?
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <input
-                    type="radio"
-                    id="worthYes"
-                    name="worthTheCost"
-                    value="Yes"
-                    checked={formData.worthTheCost === 'Yes'}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <label
-                    htmlFor="worthYes"
-                    className={`cursor-pointer w-full rounded-md px-3 py-2 text-center text-sm transition-colors ${
-                      formData.worthTheCost === 'Yes'
-                        ? 'bg-green-100 text-green-800 border border-green-300'
-                        : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
-                    }`}
-                  >
-                    Yes
-                  </label>
-                </div>
-                <div>
-                  <input
-                    type="radio"
-                    id="worthDefinitelyYes"
-                    name="worthTheCost"
-                    value="Definitely Yes"
-                    checked={formData.worthTheCost === 'Definitely Yes'}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <label
-                    htmlFor="worthDefinitelyYes"
-                    className={`cursor-pointer w-full rounded-md px-3 py-2 text-center text-sm transition-colors ${
-                      formData.worthTheCost === 'Definitely Yes'
-                        ? 'bg-green-100 text-green-800 border border-green-300'
-                        : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
-                    }`}
-                  >
-                    Definitely Yes
-                  </label>
-                </div>
-                <div>
-                  <input
-                    type="radio"
-                    id="worthNo"
-                    name="worthTheCost"
-                    value="No"
-                    checked={formData.worthTheCost === 'No'}
-                    onChange={handleChange}
-                    className="sr-only"
-                  />
-                  <label
-                    htmlFor="worthNo"
-                    className={`cursor-pointer w-full rounded-md px-3 py-2 text-center text-sm transition-colors ${
-                      formData.worthTheCost === 'No'
-                        ? 'bg-red-100 text-red-800 border border-red-300'
-                        : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
-                    }`}
-                  >
-                    No
-                  </label>
-                </div>
-              </div>
-            </div>
+{/* Worth The Cost */}
+<div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Was it worth the cost?
+      </label>
+      <div className="flex justify-between gap-2">
+        {['Yes', 'Definitely Yes', 'No'].map(option => (
+          <div key={option} className="flex-1">
+            <input
+              type="radio"
+              id={`worth${option.replace(' ', '')}`}
+              name="worthTheCost"
+              value={option}
+              checked={formData.worthTheCost === option}
+              onChange={handleChange}
+              className="sr-only" // Hides the default radio button
+            />
+            <label
+              htmlFor={`worth${option.replace(' ', '')}`}
+              className={`cursor-pointer block rounded-md px-2 py-2 text-center text-xs sm:text-sm transition-colors w-full ${
+                formData.worthTheCost === option
+                  ? option === 'No'
+                    ? 'bg-red-100 text-red-800 border border-red-300' // Red for 'No'
+                    : option === 'Definitely Yes'
+                      ? 'bg-green-100 text-green-800 border border-green-300' // Gold/Orange for 'Definitely Yes'
+                      : 'bg-yellow-100 text-yellow-800 border border-yellow-300' // Green for 'Yes'
+                  : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200' // Default unselected state
+              }`}
+            >
+              {option}
+            </label>
+          </div>
+        ))}
+      </div>
+    </div>
+
             
             {/* Star Rating */}
             <div>

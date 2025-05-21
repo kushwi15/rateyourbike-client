@@ -7,7 +7,7 @@ import { formatDistanceToNow } from '../utils/dateUtils';
 import { ArrowLeft, IndianRupee, Wrench, Calendar, Gauge, CheckCircle, XCircle, User } from 'lucide-react';
 import { useBikeContext } from '../context/BikeContext';
 
-// const API_BASE_URL = 'http://localhost:5000/api'; // Update this to your production URL when needed
+// const API_BASE_URL = 'http://localhost:5000/api'; 
 const API_BASE_URL = 'https://rateyourbike.onrender.com/api';
 
 const ReviewDetailPage: React.FC = () => {

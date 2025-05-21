@@ -129,7 +129,7 @@ const HomePage: React.FC = () => {
                           ₹{bike.bikeCost.toLocaleString()}
                         </span>
                         <span className={`ml-2 inline-block text-xs px-2 py-1 rounded-full ${
-                          bike.worthTheCost === 'Yes' ? 'bg-green-100 text-green-800' :
+                          bike.worthTheCost === 'Definitely Yes' ? 'bg-green-100 text-green-800' :
                           bike.worthTheCost === 'No' ? 'bg-red-100 text-red-800' :
                           'bg-amber-100 text-amber-800'
                         }`}>

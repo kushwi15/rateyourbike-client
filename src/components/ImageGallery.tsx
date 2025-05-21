@@ -14,10 +14,18 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Helper to build full image URLs
+  // Helper to build full image URLs - improved
   const getImageUrl = (path: string) => {
-    const base = API_BASE_URL.replace(/\/$/, ''); // remove trailing slash if any
-    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+    if (!path) return '';
+    // If path is already a full URL, return it directly
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    // Remove trailing slash from base URL if any
+    const base = API_BASE_URL.replace(/\/$/, '');
+    // Add leading slash to path if missing
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${base}${cleanPath}`;
   };
 
   const goToPrevious = () => {
@@ -31,12 +39,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
   const openModal = (index: number) => {
     setCurrentIndex(index);
     setIsModalOpen(true);
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden'; // Prevent background scroll
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    document.body.style.overflow = 'auto';
+    document.body.style.overflow = 'auto'; // Restore scroll
   };
 
   if (!images || images.length === 0) {
@@ -51,11 +59,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
 
   return (
     <div className="space-y-4">
+      {/* Main image display */}
       <div className="relative aspect-[16/9] bg-gray-100 rounded-lg overflow-hidden">
         <img
           src={getImageUrl(images[currentIndex])}
           alt={`${alt} - Featured Image`}
           className="w-full h-full object-cover transition-opacity duration-300"
+          loading="lazy"
         />
         <button
           onClick={goToPrevious}
@@ -73,6 +83,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
         </button>
       </div>
 
+      {/* Thumbnail grid */}
       <div className="grid grid-cols-5 gap-2">
         {images.map((image, index) => (
           <div
@@ -86,11 +97,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
               src={getImageUrl(image)}
               alt={`${alt} - Thumbnail ${index + 1}`}
               className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+              loading="lazy"
             />
           </div>
         ))}
       </div>
 
+      {/* Modal with full-size image and navigation */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
           <button
@@ -105,6 +118,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, alt }) => {
               src={getImageUrl(images[currentIndex])}
               alt={`${alt} - Full size image`}
               className="w-full max-h-[85vh] object-contain"
+              loading="lazy"
             />
             <div className="absolute inset-x-0 bottom-4 flex justify-center space-x-2">
               {images.map((_, index) => (
