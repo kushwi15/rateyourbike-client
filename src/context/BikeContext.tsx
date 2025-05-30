@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import axios from 'axios';
 
 // const API_BASE_URL = 'http://localhost:5000';
 const API_BASE_URL = 'https://rateyourbike.onrender.com';
 
 interface BikeReview {
+  riderName: ReactNode;
   _id: string;
   bikeName: string;
   modelName: string;

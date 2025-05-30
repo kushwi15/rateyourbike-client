@@ -9,7 +9,7 @@ import { Info, Loader, Check } from 'lucide-react';
 const ReviewFormPage: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    riderName: '', // Added riderName field
+    riderName: '',
     bikeName: '',
     modelName: '',
     purchaseYear: new Date().getFullYear(),
@@ -31,6 +31,7 @@ const ReviewFormPage: React.FC = () => {
   const [showModelSuggestions, setShowModelSuggestions] = useState(false);
   const brandInputRef = useRef<HTMLInputElement>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Scroll to top on page load
   useEffect(() => {
@@ -42,7 +43,6 @@ const ReviewFormPage: React.FC = () => {
     if (formData.bikeName) {
       const models = bikeData[formData.bikeName as keyof typeof bikeData] || [];
       setAvailableModels(models);
-      // Reset model selection if brand changes
       if (!models.includes(formData.modelName)) {
         setFormData(prev => ({ ...prev, modelName: '' }));
       }
@@ -69,7 +69,6 @@ const ReviewFormPage: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    // Convert numeric fields to numbers
     if (['purchaseYear', 'totalKM', 'bikeCost', 'costPerService'].includes(name)) {
       const numValue = Number(value);
       setFormData({
@@ -83,7 +82,6 @@ const ReviewFormPage: React.FC = () => {
       });
     }
     
-    // Clear error for this field if it exists
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -92,7 +90,6 @@ const ReviewFormPage: React.FC = () => {
     }
   };
 
-  // Handle brand input change
   const handleBrandInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, bikeName: value, modelName: '' }));
@@ -113,7 +110,6 @@ const ReviewFormPage: React.FC = () => {
     }
   };
 
-  // Handle model input change
   const handleModelInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData(prev => ({ ...prev, modelName: value }));
@@ -135,7 +131,6 @@ const ReviewFormPage: React.FC = () => {
     }
   };
 
-  // Select a brand from suggestions
   const selectBrand = (brand: string) => {
     setFormData(prev => ({ ...prev, bikeName: brand, modelName: '' }));
     setBrandSuggestions([]);
@@ -145,7 +140,6 @@ const ReviewFormPage: React.FC = () => {
     setTimeout(() => modelInputRef.current?.focus(), 0);
   };
 
-  // Select a model from suggestions
   const selectModel = (model: string) => {
     setFormData(prev => ({ ...prev, modelName: model }));
     setModelSuggestions([]);
@@ -169,14 +163,12 @@ const ReviewFormPage: React.FC = () => {
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
     
-    // Required fields
     if (!formData.riderName) newErrors.riderName = 'Please enter your name';
     if (!formData.bikeName) newErrors.bikeName = 'Please select a bike brand';
     if (!formData.modelName) newErrors.modelName = 'Please select a model';
     if (formData.rating === 0) newErrors.rating = 'Please rate your bike';
     if (!formData.review.trim()) newErrors.review = 'Please share your experience';
     
-    // Numeric validation
     if (formData.purchaseYear < 1900 || formData.purchaseYear > new Date().getFullYear()) {
       newErrors.purchaseYear = 'Please enter a valid year';
     }
@@ -185,7 +177,6 @@ const ReviewFormPage: React.FC = () => {
     if (formData.bikeCost <= 0) newErrors.bikeCost = 'Please enter the bike cost';
     if (formData.costPerService < 0) newErrors.costPerService = 'Cannot be negative';
     
-    // Images validation
     if (images.length < 3) newErrors.images = 'Please upload at least 3 images';
     
     setErrors(newErrors);
@@ -196,7 +187,6 @@ const ReviewFormPage: React.FC = () => {
     e.preventDefault();
     
     if (!validateForm()) {
-      // Scroll to the first error
       const firstErrorField = Object.keys(errors)[0];
       if (firstErrorField) {
         const element = document.querySelector(`[name="${firstErrorField}"]`);
@@ -206,33 +196,39 @@ const ReviewFormPage: React.FC = () => {
     }
     
     setIsSubmitting(true);
+    setUploadProgress(0);
     
     try {
-      // Create a FormData object to send the files
       const formDataToSend = new FormData();
       
-      // Append all the form fields
       Object.entries(formData).forEach(([key, value]) => {
         formDataToSend.append(key, value.toString());
       });
       
-      // Append all images
-      images.forEach(image => {
+      images.forEach((image, index) => {
         formDataToSend.append('bikeImages', image);
+        formDataToSend.append(`imageInfo[${index}][name]`, image.name);
+        formDataToSend.append(`imageInfo[${index}][type]`, image.type);
+        formDataToSend.append(`imageInfo[${index}][size]`, image.size.toString());
       });
       
-      // Send the data to the server
+      formDataToSend.append('timestamp', Date.now().toString());
+      
       // const response = await axios.post('http://localhost:5000/api/bikes/add', formDataToSend, {
       const response = await axios.post('https://rateyourbike.onrender.com/api/bikes/add', formDataToSend, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(progress);
+          }
+        },
       });
       
       if (response.status === 201) {
         setSubmitSuccess(true);
-        
-        // Redirect to the detail page after a delay
         setTimeout(() => {
           navigate(`/review/${response.data._id}`);
         }, 2000);
@@ -241,10 +237,11 @@ const ReviewFormPage: React.FC = () => {
       console.error('Error submitting review:', error);
       setErrors({
         ...errors,
-        submit: 'Failed to submit your review. Please try again.'
+        submit: 'Failed to submit your review. Please try again.',
       });
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
@@ -418,7 +415,7 @@ const ReviewFormPage: React.FC = () => {
                   inputMode="numeric"
                   id="totalKM"
                   name="totalKM"
-                  value={formData.totalKM}
+                  value={formData.totalKM || ''}
                   onChange={handleChange}
                   className={`w-full rounded-md border ${errors.totalKM ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
                   placeholder="0"
@@ -436,7 +433,7 @@ const ReviewFormPage: React.FC = () => {
                   inputMode="numeric"
                   id="bikeCost"
                   name="bikeCost"
-                  value={formData.bikeCost}
+                  value={formData.bikeCost || ''}
                   onChange={handleChange}
                   className={`w-full rounded-md border ${errors.bikeCost ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
                   placeholder="0"
@@ -454,7 +451,7 @@ const ReviewFormPage: React.FC = () => {
                   inputMode="numeric"
                   id="costPerService"
                   name="costPerService"
-                  value={formData.costPerService}
+                  value={formData.costPerService || ''}
                   onChange={handleChange}
                   className={`w-full rounded-md border ${errors.costPerService ? 'border-red-300' : 'border-gray-300'} px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#0B60B0] focus:border-[#0B60B0]`}
                   placeholder="0"
@@ -463,42 +460,41 @@ const ReviewFormPage: React.FC = () => {
               </div>
             </div>
             
-{/* Worth The Cost */}
-<div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Was it worth the cost?
-      </label>
-      <div className="flex justify-between gap-2">
-        {['Yes', 'Definitely Yes', 'No'].map(option => (
-          <div key={option} className="flex-1">
-            <input
-              type="radio"
-              id={`worth${option.replace(' ', '')}`}
-              name="worthTheCost"
-              value={option}
-              checked={formData.worthTheCost === option}
-              onChange={handleChange}
-              className="sr-only" // Hides the default radio button
-            />
-            <label
-              htmlFor={`worth${option.replace(' ', '')}`}
-              className={`cursor-pointer block rounded-md px-2 py-2 text-center text-xs sm:text-sm transition-colors w-full ${
-                formData.worthTheCost === option
-                  ? option === 'No'
-                    ? 'bg-red-100 text-red-800 border border-red-300' // Red for 'No'
-                    : option === 'Definitely Yes'
-                      ? 'bg-green-100 text-green-800 border border-green-300' // Gold/Orange for 'Definitely Yes'
-                      : 'bg-yellow-100 text-yellow-800 border border-yellow-300' // Green for 'Yes'
-                  : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200' // Default unselected state
-              }`}
-            >
-              {option}
-            </label>
-          </div>
-        ))}
-      </div>
-    </div>
-
+            {/* Worth The Cost */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Was it worth the cost?
+              </label>
+              <div className="flex justify-between gap-2">
+                {['Yes', 'Definitely Yes', 'No'].map(option => (
+                  <div key={option} className="flex-1">
+                    <input
+                      type="radio"
+                      id={`worth${option.replace(' ', '')}`}
+                      name="worthTheCost"
+                      value={option}
+                      checked={formData.worthTheCost === option}
+                      onChange={handleChange}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor={`worth${option.replace(' ', '')}`}
+                      className={`cursor-pointer block rounded-md px-2 py-2 text-center text-xs sm:text-sm transition-colors w-full ${
+                        formData.worthTheCost === option
+                          ? option === 'No'
+                            ? 'bg-red-100 text-red-800 border border-red-300'
+                            : option === 'Definitely Yes'
+                              ? 'bg-green-100 text-green-800 border border-green-300'
+                              : 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                          : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                      }`}
+                    >
+                      {option}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
             
             {/* Star Rating */}
             <div>
@@ -538,9 +534,38 @@ const ReviewFormPage: React.FC = () => {
                 setImages={setImages} 
                 minImages={3}
                 maxImages={5}
+                acceptedFormats={['image/jpeg', 'image/png', 'image/webp']}
+                maxFileSize={5 * 1024 * 1024} // 5MB
+                onError={(error) => setErrors({...errors, images: error})}
               />
               {errors.images && <p className="mt-1 text-sm text-red-600">{errors.images}</p>}
             </div>
+            
+            {/* Upload Progress */}
+            {isSubmitting && uploadProgress > 0 && (
+              <div className="pt-2">
+                <div className="relative pt-1">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
+                        Uploading
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-semibold inline-block text-blue-600">
+                        {uploadProgress}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200">
+                    <div
+                      style={{ width: `${uploadProgress}%` }}
+                      className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-300"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Submit Button */}
             <div className="flex justify-end">
