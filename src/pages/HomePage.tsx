@@ -96,7 +96,7 @@ const HomePage: React.FC = () => {
                   <div className="h-48 bg-gray-200 relative overflow-hidden">
                     {bike.images && bike.images.length > 0 ? (
                       <img
-                        src={`${API_BASE_URL}${bike.images[0]}`} // <-- Updated here
+                        src={`${bike.images[0]}`} // <-- Updated here
                         alt={bike.bikeName}
                         className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                       />
